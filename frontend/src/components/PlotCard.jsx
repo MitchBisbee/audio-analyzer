@@ -56,25 +56,35 @@ const enhanceWithStyle = (plot) => {
 };
 
 const PlotCard = ({frequencyResponseData, timeDomainResponseData,impulseResponseData}) => {
-  const chartRef = useRef(null);
+  const freqRef = useRef(null);
+  const timeRef = useRef(null);
+  const impulseRef = useRef(null);
   if (!frequencyResponseData || !timeDomainResponseData || !impulseResponseData) {
     return <div style={{ textAlign: "center", padding: "1rem" }}><>🌀</>Loading plots...</div>;
   }
-  const downLoadChart = () =>{
-    const chart = chartRef.current;
-    if (!chart) return;
-    const url = chart.toBase64Image();
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "audio_plot.png";
-    link.click();
-  }
+  const downloadAll = () => {
+      const refs = [
+        { ref: freqRef, name: "frequency_response.png" },
+        { ref: timeRef, name: "time_domain.png" },
+        { ref: impulseRef, name: "impulse_response.png" }
+      ];
+
+      refs.forEach(({ ref, name }) => {
+        if (ref.current) {
+          const url = ref.current.toBase64Image();
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = name;
+          link.click();
+        }
+      });
+    };
 
   return (
     <DashboardCard title="📈 Plot Viewer">
       <PlotWrapper>
         <Line 
-          ref = {chartRef} 
+          ref = {freqRef} 
           data= {enhanceWithStyle(frequencyResponseData)} 
           options={options}
         />
@@ -82,7 +92,7 @@ const PlotCard = ({frequencyResponseData, timeDomainResponseData,impulseResponse
 
       <PlotWrapper>
         <Line
-          ref = {chartRef}  
+          ref = {timeRef}  
           data={enhanceWithStyle(timeDomainResponseData)} 
           options={options} 
         />
@@ -90,13 +100,13 @@ const PlotCard = ({frequencyResponseData, timeDomainResponseData,impulseResponse
       
       <PlotWrapper>
         <Line
-          ref = {chartRef}  
+          ref = {impulseRef}  
           data={enhanceWithStyle(impulseResponseData)} 
           options={options}
         />
       </PlotWrapper>
       
-      <button onClick={downLoadChart} style={{ marginTop: "1rem", 
+      <button onClick={downloadAll} style={{ marginTop: "1rem", 
         backgroundColor: "hsl(205, 100.00%, 50.00%)",
         color: "white",
         padding: "10px 20px",
@@ -104,7 +114,7 @@ const PlotCard = ({frequencyResponseData, timeDomainResponseData,impulseResponse
         border: "none",
         cursor: "pointer",
         margin: "5px"}}>
-        Download Frequency Plot PNG
+        📥 Download All Plots as PNG
       </button>
     </DashboardCard>
   );
