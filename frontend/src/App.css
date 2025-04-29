@@ -82,18 +82,37 @@ body{
   color: white;
 }
 
-button {
-  background-color: #1f6feb;
+.button {
+  background-color: hsl(205, 100%, 50%);
   color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
   border: none;
-  border-radius: 10px;
-  padding: 0.6rem 1rem;
   cursor: pointer;
-  font-weight: bold;
-  transition: background 0.2s ease;
+  display: flex;
+  justify-content: center;
+  transition: background-color 0.3s, transform 0.1s;
 }
 
-button:hover {
+.button-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap; /* Allows buttons to wrap on smaller screens */
+  gap: 10px; /* Adds space between buttons */
+  justify-content: center; /* Centers buttons horizontally */
+}
+
+.button:active {
+  background-color: hsl(205, 100%, 40%);
+  transform: scale(0.98);
+}
+
+.button:disabled {
+  background-color: gray;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.button:hover {
   background-color: #388bff;
 }
 

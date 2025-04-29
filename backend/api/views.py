@@ -1,6 +1,6 @@
+from datetime import datetime
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from dataclasses import asdict
 from django.http import FileResponse
 from django.core.files.storage import default_storage
 import os
@@ -31,46 +31,70 @@ def upload_audio(request):
 @api_view(["POST"])
 def apply_filter(request):
     try:
+        # --- Input Extraction ---
         file = request.FILES.get("file")
         filter_type = request.data.get("filter_type")
         order = int(request.data.get("order", 2))
         cutoff = request.data.get("cutoff")
+
+        # --- Cutoff Processing ---
         if "," in cutoff:
-            cutoff = tuple(map(float, cutoff.split(",")))
+            cutoff_values = tuple(map(float, cutoff.split(",")))
         else:
-            cutoff = float(cutoff)
+            cutoff_values = float(cutoff)
 
-        path = default_storage.save(file.name, file)
-        full_path = default_storage.path(path)
+        # --- Save Original File ---
+        original_filename = default_storage.save(file.name, file)
+        full_path = default_storage.path(original_filename)
 
+        # --- Initialize Analyzer ---
         analyzer = AudioAnalyzer(full_path)
 
-        match filter_type.lower():
-            case "low":
-                analyzer.apply_lowpass_filter(cutoff, order)
-            case "high":
-                analyzer.apply_highpass_filter(order, cutoff)
-            case "band":
-                lowcut = request.data.get("low cutoff")
-                highcut = request.data.get("high cutoff")
-                analyzer.apply_bandpass_filter(lowcut, highcut, order)
-            case "bandstop":
-                lowcut = request.data.get("low cutoff")
-                highcut = request.data.get("high cutoff")
-                analyzer.apply_bandstop_filter((lowcut, highcut), order)
-            case _:
-                return Response({"error": "Invalid filter type"}, status=400)
+        # --- Apply Filter ---
+        filter_type_lower = filter_type.lower()
+        if filter_type_lower == "low":
+            analyzer.apply_lowpass_filter(cutoff_values, order)
+        elif filter_type_lower == "high":
+            analyzer.apply_highpass_filter(order, cutoff_values)
+        elif filter_type_lower == "band":
+            lowcut = float(request.data.get("low cutoff"))
+            highcut = float(request.data.get("high cutoff"))
+            analyzer.apply_bandpass_filter(lowcut, highcut, order)
+        elif filter_type_lower == "bandstop":
+            lowcut = float(request.data.get("low cutoff"))
+            highcut = float(request.data.get("high cutoff"))
+            analyzer.apply_bandstop_filter((lowcut, highcut), order)
+        else:
+            return Response({"error": "Invalid filter type"}, status=400)
 
-        output_path = full_path.replace(".wav", "_filtered.wav")
-        filtered_path = analyzer.save_audio_file(use_filtered=True,
-                                                 output_filename=output_path)
-        download_url = f"{settings.MEDIA_URL}{os.path.basename(filtered_path)}"
-        return Response({
-            "message": f"{filter_type} pass filter applied",
-            "filter_file": os.path.basename(output_path),
-            "download_url": download_url,
-            "filtered_audio_url": download_url
-        })
+        # --- Generate New Filename ---
+        base_name, _ = os.path.splitext(file.name)
+        cutoff_str = (
+            "-".join(map(str, cutoff_values))
+            if isinstance(cutoff_values, tuple)
+            else str(cutoff_values)
+        )
+        timestamp = datetime.now().strftime("%Y%m%d_%H-%M-%S")
+        new_filename = f"{base_name}_{filter_type_lower}_{cutoff_str}Hz_{timestamp}.wav"
+        output_path = os.path.join(settings.MEDIA_ROOT, new_filename)
+
+        # --- Save Filtered Audio ---
+        filtered_path = analyzer.save_audio_file(
+            use_filtered=True, output_filename=output_path
+        )
+
+        # --- Construct Download URL ---
+        download_url = f"{settings.MEDIA_URL}{new_filename}"
+
+        return Response(
+            {
+                "message": f"{filter_type} pass filter applied",
+                "filter_file": new_filename,
+                "download_url": download_url,
+                "filtered_audio_url": download_url,
+            }
+        )
+
     except Exception as e:
         return Response({"error": str(e)}, status=500)
 

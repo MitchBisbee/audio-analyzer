@@ -59,6 +59,28 @@ function App() {
         console.error("Playback failed:", error);
     }
   };
+  
+  const playFilteredAudio = async () => {
+    try{
+      if(!downloadUrl || isPlaying) return;
+
+        const response = await fetch(downloadUrl);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const audio = new Audio(blobUrl);
+        audioRef.current = audio;
+
+        audio.addEventListener("ended", () => {
+          setIsPlaying(false);
+          audio.currentTime = 0;
+        })
+        audio.play();
+        setIsPlaying(true);
+    } catch (error){
+      console.error("Filtered audio playback failed:", error);
+    }
+  }
 
   const pauseAudio = () => {
     try {
@@ -141,7 +163,8 @@ function App() {
             
             <div className="dashboard-card">
               <PlaybackCard
-                playonClick={playAudio}
+                playOriginalOnClick={playAudio}
+                playFilteredOnClick={playFilteredAudio}
                 pauseonClick={pauseAudio}
                 file={file}
               />
